@@ -1,4 +1,6 @@
 bool taskLiquid = true, taskPowder= true, taskStir = true;
+bool finishedCupRemoved = false;
+short lightThreshold;
 typedef struct {
     byte curSpot;
     int time;
@@ -13,6 +15,23 @@ task powder()//Henon
 
 task stir()//Devin
 {}
+task fCup()//polls for whether the cup has been removed or not
+{
+
+	while(!finishedCupRemove)
+	{
+		displayBigTextLine(5, "Please remove your cup");
+		if(lightDetected(lightThreshold))
+		{
+			finishedCupRemove = true;
+		}
+
+	}
+
+
+}
+
+
 
 void configureAllSensors()
 {
@@ -21,22 +40,29 @@ void configureAllSensors()
 	clearTimer(T1);
 
 }
-void finishedCup()//polls for whether the cup has been removed or not
-{
 
-}
 void rotate()//Free
 {
 
+}
+
+void receiptPrint(int cupCount, int cupTime)
+{}
+
+int lightDetected(short threshold)
+{
+	if(SensorValue[S3] > threshold)
+		return true;
+	return false;
 }
 
 
 task main()
 {
 	short cupCount = 0;
-	bool finishedCup = false;
-	int lightThreshold;
-	int count = 0;
+
+
+	short count = 0;
 
 	Cup cups[4];
 	configureAllSensors();
@@ -49,7 +75,7 @@ task main()
 	}
 	while(!getButtonPress(ButtonEnter))
 	{
-		if(SensorValue(S1) > lightThreshold)//if we detect reflected light
+		if(lightDetected(threshold))//if we detect reflected light
 		{
 			Cup c;
 			c.curSpot = 0;
@@ -66,26 +92,29 @@ task main()
 				if(cups[i] == -1)
 					continue;
 				else if (cups[i].curSpot == 1)//cup at liquid station
-					taskLiquid();
+					task liquid();
 				else if(cups[i].curSpot  == 2)//cup at powder station
-					taskPowder();
+					task powder();
 				else if(cups[i].curSpot  == 3) //cup at stirring station
-					taskStir();
+					task stir();
 				else if(cups[i].curSpot == 4)//cup is at loading station
 				{
-					finishedCup == true;
+					finishedCupRemoved = true;
 					cups[i].curSpot = -1;
 					cupCount++;
-					receiptPrint(cupCount,cups[i].curTime);
+					receiptPrint(cupCount,cups[i].time);
+
+					task fCup();//constantly polls for whether the cup has been removed, then makes fCup true
 					continue;
 				}
 				cups[i].curSpot++;
 		}
-		while(!((taskLiquid && taskPowder) && taskStir))//while the tasks are false
+		while(!(((taskLiquid && taskPowder) && taskStir) && finishedCupRemoved))//while the tasks are false
 		{}
+
+
 		stopAllTasks();
-		if(finishedCup)
-			finishedCup();//TODO - figure out how the removal of a cup will work -> another task?
+
 
 
 
