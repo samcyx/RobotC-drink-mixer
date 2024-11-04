@@ -1,6 +1,13 @@
 bool taskLiquid = true, taskPowder= true, taskStir = true;
 bool finishedCupRemoved = false;
 short lightThreshold;
+int lightDetected(short threshold)
+{
+	if(SensorValue[S3] > threshold)
+		return true;
+	return false;
+}
+
 typedef struct {
     byte curSpot;
     int time;
@@ -18,12 +25,12 @@ task stir()//Devin
 task fCup()//polls for whether the cup has been removed or not
 {
 
-	while(!finishedCupRemove)
+	while(!finishedCupRemoved)
 	{
 		displayBigTextLine(5, "Please remove your cup");
 		if(lightDetected(lightThreshold))
 		{
-			finishedCupRemove = true;
+			finishedCupRemoved = true;
 		}
 
 	}
@@ -49,12 +56,7 @@ void rotate()//Free
 void receiptPrint(int cupCount, int cupTime)
 {}
 
-int lightDetected(short threshold)
-{
-	if(SensorValue[S3] > threshold)
-		return true;
-	return false;
-}
+
 
 
 task main()
@@ -73,9 +75,9 @@ task main()
 
 			cups[i] = c;
 	}
-	while(!getButtonPress(ButtonEnter))
+	while(!getButtonPress(buttonEnter))
 	{
-		if(lightDetected(threshold))//if we detect reflected light
+		if(lightDetected(lightThreshold))//if we detect reflected light
 		{
 			Cup c;
 			c.curSpot = 0;
@@ -84,19 +86,19 @@ task main()
 			displayBigTextLine(4,"Press any button to start/continue operation");
 			while(!getButtonPress(buttonAny)){}
 			while(getButtonPress(buttonAny)){}
-			cups[count%4].time = timer1(T1);
+			cups[count%4].time = time1[T1];
 		}
 		count++;
 		for(int i = 0; i < 4; i++)
 		{
-				if(cups[i] == -1)
+				if(cups[i].curSpot == -1)
 					continue;
 				else if (cups[i].curSpot == 1)//cup at liquid station
-					task liquid();
+					startTask(liquid);
 				else if(cups[i].curSpot  == 2)//cup at powder station
-					task powder();
+					startTask(powder);
 				else if(cups[i].curSpot  == 3) //cup at stirring station
-					task stir();
+					startTask(stir);
 				else if(cups[i].curSpot == 4)//cup is at loading station
 				{
 					finishedCupRemoved = true;
@@ -104,7 +106,9 @@ task main()
 					cupCount++;
 					receiptPrint(cupCount,cups[i].time);
 
-					task fCup();//constantly polls for whether the cup has been removed, then makes fCup true
+					startTask(fCup);//constantly polls for whether the cup has been removed, then makes fCup true
+					cups[i].curSpot = -1;//reset the curSpot attribute of that cup object
+
 					continue;
 				}
 				cups[i].curSpot++;
