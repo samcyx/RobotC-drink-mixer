@@ -1,6 +1,24 @@
+
+typedef struct {
+    byte curSpot;
+    int time;
+    bool highPowder;
+} Cup;
+
+
 bool taskLiquid = true, taskPowder= true, taskStir = true;
 bool finishedCupRemoved = false;
 short lightThreshold;
+short cupCount = 0;
+short count = 0;
+
+
+/*
+dfdf
+*/
+
+
+
 int lightDetected(short threshold)
 {
 	if(SensorValue[S3] > threshold)
@@ -8,12 +26,8 @@ int lightDetected(short threshold)
 	return false;
 }
 
-typedef struct {
-    byte curSpot;
-    int time;
-} Cup;
 
-
+Cup cups[4];
 task liquid()//Lucas
 {}
 
@@ -55,41 +69,26 @@ void rotate()//Free
 
 void receiptPrint(int cupCount, int cupTime)
 {}
-
-
-
-
-task main()
+void receivePowderInput(Cup &c)
 {
-	short cupCount = 0;
+
+}
 
 
-	short count = 0;
+void initializeCup(int count)
+{
+		Cup c;
+		c.curSpot = 0;
 
-	Cup cups[4];
-	configureAllSensors();
+		cups[count%4]	= c;
+		receivePowderInput(c);
+		cups[count%4].time = time1[T1];
+}
+
+
+void initializeTasks()
+{
 	for(int i = 0; i < 4; i++)
-	{
-			Cup c;
-			c.curSpot = -1;
-
-			cups[i] = c;
-	}
-	while(!getButtonPress(buttonEnter))
-	{
-		if(lightDetected(lightThreshold))//if we detect reflected light
-		{
-			Cup c;
-			c.curSpot = 0;
-
-			cups[count%4]	= c;
-			displayBigTextLine(4,"Press any button to start/continue operation");
-			while(!getButtonPress(buttonAny)){}
-			while(getButtonPress(buttonAny)){}
-			cups[count%4].time = time1[T1];
-		}
-		count++;
-		for(int i = 0; i < 4; i++)
 		{
 				if(cups[i].curSpot == -1)
 					continue;
@@ -113,6 +112,36 @@ task main()
 				}
 				cups[i].curSpot++;
 		}
+
+}
+
+void populateCups()
+{
+
+	for(int i = 0; i < 4; i++)
+	{
+			Cup c;
+			c.curSpot = -1;
+
+			cups[i] = c;
+	}
+}
+//To do: start localize variables that aren't the cup array
+task main()
+{
+
+
+	configureAllSensors();
+	populateCups();
+	while(!getButtonPress(buttonEnter))
+	{
+		if(lightDetected(lightThreshold))//if we detect reflected light
+		{
+			initializeCup(count);
+		}
+		count++;
+		initializeTasks();
+
 		while(!(((taskLiquid && taskPowder) && taskStir) && finishedCupRemoved))//while the tasks are false
 		{}
 
