@@ -277,34 +277,49 @@ task main()
 
 
 
-	//TO-DO: add display text line
+	clearTimer(T1);
 
+	int curTime = time100[T1];
+	while(!lightDetected(lightThreshold) && time100[T1] < curTime + 300)
+	{
 
+		while(cupsExist()){//TODO add watchdog timer to kill program if tasks take too long to execute
+			clearScreen();
+			count++;
+			initializeTasks();
+			curTime = time100[T1];
+			while(!((((taskLiquid && taskPowder) && taskStir) && finishedCupRemoved) && (time100[T1] < curTime + 300)))//while the tasks are false and the watch dog hasn't times out
+			{}
+			if(time100[T1] < curTime + 300)
+			{
+				displayBigTextLine(0,"Unexpected");
+				displayBigTextLine(2,"Failure!");
+				stopTask(liquid);
+				stopTask(powder);
+				stopTask(fCup);
+				stopTask(stir);
+				wait1Msec(5000);
+				stopAllTasks();
+			}
+			displayBigTextLine(6,"enter %d", count);//testing line
+			rotate();
 
-	while(cupsExist()){//TODO add watchdog timer to kill program if tasks take too long to execute
+			if(lightDetected(lightThreshold))//if we detect reflected light
+			{
+				initializeCup(count);
+			}
 
-		count++;
-		initializeTasks();
-
-		while(!(((taskLiquid && taskPowder) && taskStir) && finishedCupRemoved))//while the tasks are false
-		{}
-		displayBigTextLine(6,"enter %d", count);
-		rotate();
-
-		if(lightDetected(lightThreshold))//if we detect reflected light
-		{
-			initializeCup(count);
+			stopTask(liquid);
+			stopTask(powder);
+			stopTask(fCup);
+			stopTask(stir);
 		}
-
-		stopTask(liquid);
-		stopTask(powder);
-		stopTask(fCup);
-		stopTask(stir);
-
+		curTime = time1[T1];
+		displayBigTextLine(0,"Please add cup");
+		displayBigTextLine(4,"Operation will cease");
+		displayBigTextLine(6,"in %d seconds(s)", 30-curTime%10);
 
 
-
-		rotate();
 	}
-
+	stopAllTasks();
 }
