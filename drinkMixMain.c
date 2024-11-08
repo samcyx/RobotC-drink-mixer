@@ -7,7 +7,7 @@ typedef struct {
 
 
 bool taskLiquid = true, taskPowder= true, taskStir = true;
-bool finishedCupRemoved = false;
+bool finishedCupRemoved = true;
 const short lightThreshold = 30;
 short cupCount = 0;
 short count = 0;
@@ -17,7 +17,13 @@ Cup cups[4];
 dfdf
 */
 
-
+void clearScreen()
+{
+	for(int i = 0; i < 14;i++)
+	{
+		displayTextLine(i,"");
+	}
+}
 
 bool lightDetected(short threshold)
 {
@@ -29,16 +35,46 @@ bool lightDetected(short threshold)
 
 
 task liquid()//Lucas
-{}
+{
+	taskLiquid = false;
+	motor[motorA] = 10;
+	wait1Msec(9000);
+	motor[motorA] = 10;
+	taskLiquid = true;
+
+}
 
 task powder()//Henon
-{}
+{
+
+	taskPowder = false;
+	wait1Msec(5000);
+	setLEDColor(ledRedFlash);
+
+	taskPowder = true;
+
+}
 
 task stir()//Devin
-{}
+{
+	taskStir = false;
+	nMotorEncoder[motorC] = 0;
+	motor[motorC] = -50;
+	while(abs(nMotorEncoder[motorC])<(360*18))
+	{}
+	motor[motorC] = 0;
+	wait1Msec(100);
+	motor[motorC] = 50;
+	nMotorEncoder[motorC] = 0;
+	while(abs(nMotorEncoder[motorC])<(360*18))
+	{}
+	motor[motorC] = 0;
+	taskStir = true;
+}
 task fCup()//polls for whether the cup has been removed or not
 {
 
+	finishedCupRemoved = false;
 	while(!finishedCupRemoved)
 	{
 		displayBigTextLine(5, "Please remove your cup");
@@ -104,10 +140,14 @@ bool receivePowderInput()
 			amount = false;
 			amountChosen = true;
 		}
+		while(getButtonPress(buttonUp)||getButtonPress(buttonDown))
+		{}
 		while(amountChosen)
 		{
 			if(getButtonPress(buttonEnter))
 			{
+				clearScreen();
+				while(getButtonPress(buttonEnter)){}
 				return amount;
 			}
 			else if(getButtonPress(buttonUp) || getButtonPress(buttonDown))
@@ -209,27 +249,37 @@ bool cupsExist()
 	return false;
 }
 
-
-//To do: start localize variables that aren't the cup array
-task main()
+void initialCupSequence()
 {
-
-
 	configureAllSensors();
 	populateCups();
-
-
-	//TO-DO: add display text line
-
-	displayBigTextLine(2,"Please put your cup in the receptacle");
+	displayBigTextLine(2,"Please put your\n cup in the\n receptacle");
+	displayBigTextLine(4,"cup in the");
+	displayBigTextLine(6,"receptacle");
 	while(!lightDetected(lightThreshold)){}//wait for cup to be placed
-	displayBigTextLine(2,"Press the center button\n to begin operation!!!!!\n:)");
+	clearScreen();
 	initializeCup(count);//initialize the cup we have detected
-
+	displayBigTextLine(2,"Press the ");
+	displayBigTextLine(4,"center button");
+	displayBigTextLine(6,"to begin! :)");
 	while(!getButtonPress(buttonEnter))
 	{}
 	while(getButtonPress(buttonEnter))
 	{}
+	clearScreen();
+}
+
+//To do: start localize variables that aren't the cup array
+task main()
+{
+	initialCupSequence();
+
+
+
+
+	//TO-DO: add display text line
+
+
 
 	while(cupsExist()){//TODO add watchdog timer to kill program if tasks take too long to execute
 
@@ -238,6 +288,8 @@ task main()
 
 		while(!(((taskLiquid && taskPowder) && taskStir) && finishedCupRemoved))//while the tasks are false
 		{}
+		displayBigTextLine(6,"enter %d", count);
+		rotate();
 
 		if(lightDetected(lightThreshold))//if we detect reflected light
 		{
