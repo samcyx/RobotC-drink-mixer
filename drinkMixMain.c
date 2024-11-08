@@ -8,7 +8,7 @@ typedef struct {
 
 bool taskLiquid = true, taskPowder= true, taskStir = true;
 bool finishedCupRemoved = false;
-short lightThreshold;//TO DO
+const short lightThreshold = 30;
 short cupCount = 0;
 short count = 0;
 Cup cups[4];
