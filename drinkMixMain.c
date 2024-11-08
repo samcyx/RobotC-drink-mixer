@@ -231,7 +231,7 @@ task main()
 	while(getButtonPress(buttonEnter))
 	{}
 
-	while(cupsExist()){
+	while(cupsExist()){//TODO add watchdog timer to kill program if tasks take too long to execute
 
 		count++;
 		initializeTasks();
