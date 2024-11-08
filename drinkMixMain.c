@@ -73,6 +73,11 @@ void rotate()//Devin
 		motor[motorD] = -30+ (30*(abs(nMotorEncoder[motorD])/(90*5)));
 	}
 	motor[motorD] = 0;
+	for(int i = 0; i < 4; i++)
+	{
+		if(!cups[i].curSpot!= -1)
+			cups[i].curSpot++;
+	}
 }
 
 void receiptPrint(int cupCount, int cupTime)
@@ -132,9 +137,8 @@ void initializeTasks()
 {
 	for(int i = 0; i < 4; i++)
 	{
-		if(cups[i].curSpot == -1)
-			continue;
-		else if (cups[i].curSpot == 1)//cup at liquid station
+
+		if (cups[i].curSpot == 1)//cup at liquid station
 			startTask(liquid);
 		else if(cups[i].curSpot  == 2)//cup at powder station
 			startTask(powder);
@@ -149,10 +153,8 @@ void initializeTasks()
 
 			startTask(fCup);//constantly polls for whether the cup has been removed, then makes fCup true
 			cups[i].curSpot = -1;//reset the curSpot attribute of that cup object
-
-			continue;
 		}
-		cups[i].curSpot++;
+
 	}
 
 }
