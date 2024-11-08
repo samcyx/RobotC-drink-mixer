@@ -19,7 +19,7 @@ dfdf
 
 
 
-int lightDetected(short threshold)
+bool lightDetected(short threshold)
 {
 	if(SensorValue[S3] > threshold)
 		return true;
@@ -126,6 +126,8 @@ void initializeCup(int count)
 }
 
 
+
+
 void initializeTasks()
 {
 	for(int i = 0; i < 4; i++)
@@ -140,7 +142,7 @@ void initializeTasks()
 			startTask(stir);
 		else if(cups[i].curSpot == 4)//cup is at loading station
 		{
-			finishedCupRemoved = true;
+			finishedCupRemoved = false;
 			cups[i].curSpot = -1;
 			cupCount++;
 			receiptPrint(cupCount,cups[i].time);
@@ -217,8 +219,9 @@ task main()
 
 	//TO-DO: add display text line
 
-
+	displayBigTextLine(2,"Please put your cup in the receptacle");
 	while(!lightDetected(lightThreshold)){}//wait for cup to be placed
+	displayBigTextLine(2,"Press the center button\n to begin operation!!!!!\n:)");
 	initializeCup(count);//initialize the cup we have detected
 
 	while(!getButtonPress(buttonEnter))
