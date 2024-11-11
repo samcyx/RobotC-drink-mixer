@@ -232,7 +232,7 @@ bool cupsExist()
 	}
 
 	clearTimer(T2);
-
+	//potentially problematic conflict with timer coder in larger while loop
 	while(time1[T2] < 30000)
 
 	{
