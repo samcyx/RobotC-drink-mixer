@@ -1,4 +1,9 @@
 
+#include "PC_FileIO.c"
+
+
+TFileHandle reciept;
+bool fileOkay = openWritePC(reciept, "reciept.txt");
 
 typedef struct {
 	byte curSpot;
@@ -48,19 +53,21 @@ task liquid()//Lucas
 
 task powder()//Henon
 {
-
 	taskPowder = false;
-	if(powderLevel)
-	{
-		setLEDColor(ledRedFlash);
-	}
-	else
-	{
-		setLEDColor(ledOrangeFlash);
-	}
-	wait1Msec(5000);
-	setLEDColor(ledOff);
+  const int HIGH_POWDER_LVL = 20;
+  const int LOW_POWDER_LVL = 10;
+  const int CONVFACTOR = 360;
+  int powderLVL = 0;
+  if (powderLevel)
+  	powderLVL = HIGH_POWDER_LVL;
+ 	else
+ 		powderLVL = LOW_POWDER_LVL;
 
+ 	nMotorEncoder[motorB] = 0;
+  motor[motorB] = 20;
+	wait1Msec(50); //Slight delay to take load off CPU
+  while (abs(nMotorEncoder[motorB]) < powderLVL*CONVFACTOR) {}
+	motor[motorB] = 0;  // Stop the motor
 	taskPowder = true;
 
 }
@@ -70,13 +77,13 @@ task stir()//Devin
 	taskStir = false;
 	nMotorEncoder[motorC] = 0;
 	motor[motorC] = -50;
-	while(abs(nMotorEncoder[motorC])<(360*17.5))
+	while(abs(nMotorEncoder[motorC])<(360*17.75))
 	{}
 	motor[motorC] = 0;
 	wait1Msec(100);
 	motor[motorC] = 50;
 	nMotorEncoder[motorC] = 0;
-	while(abs(nMotorEncoder[motorC])<(360*17.6))
+	while(abs(nMotorEncoder[motorC])<(360*18.5))
 	{}
 	motor[motorC] = 0;
 	taskStir = true;
@@ -103,8 +110,8 @@ void configureAllSensors()//make sure everything aligns with sensor
 	wait1Msec(50);
 	SensorMode[S1] = modeEV3Color_Reflected;
 	wait1Msec(50);
+	nMotorEncoder[motorA] = nMotorEncoder[motorB] = nMotorEncoder[motorC] = nMotorEncoder[motorD] = 0;
 	clearTimer(T1);
-
 }
 
 void rotate()//Devin
@@ -125,8 +132,32 @@ void rotate()//Devin
 	}
 }
 
-void receiptPrint(int cupCount, int cupTime)
-{}
+void receiptPrint (short cupCount, float time, bool powd)
+{
+	string cup = "Drink ";
+	string took = " took ";
+	string sec = " seconds to make a ";
+	string level;
+	if(powd)
+		level = "strong drink.";
+	else
+		level = "weak drink.";
+
+	writeTextPC(reciept, cup);
+
+	writeLongPC(reciept, cupCount);
+
+	writeTextPC(reciept, took);
+
+	writeLongPC(reciept, time);
+
+	writeTextPC(reciept, sec);
+
+	writeTextPC(reciept, level);
+
+	writeEndlPC(reciept);
+}
+
 
 bool receivePowderInput()
 {
@@ -134,22 +165,29 @@ bool receivePowderInput()
 	bool amountChosen = false;
 	bool confirm = false;
 	clearScreen();
-	displayTextLine(5, "Enter the amount of powder");
-	displayTextLine(7, "Press up for strong");
-	displayTextLine(8, "Press down for weak");
+	displayBigTextLine(3, "Enter the amount");
+	displayBigTextLine (5, "of powder");
+	displayBigTextLine(7, "Up for strong");
+	displayBigTextLine(9, "Down for weak");
 	while(!confirm)
 	{
 		if(getButtonPress(buttonUp))
 		{
 			clearScreen();
-			displayTextLine(5, "Press Enter to continue");
+			displayBigTextLine(2, "Press Enter");
+			displayBigTextLine (4, "to confirm");
+			displayBigTextLine(6, "Press other");
+			displayBigTextLine(8, "to cancel");
 			amount = true;
 			amountChosen = true;
 		}
 		else if(getButtonPress(buttonDown))
 		{
 			clearScreen();
-			displayTextLine(5, "Press Enter to continue");
+			displayBigTextLine(2, "Press Enter");
+			displayBigTextLine (4, "to confirm");
+			displayBigTextLine(6, "Press other");
+			displayBigTextLine(8, "to cancel");
 			amount = false;
 			amountChosen = true;
 		}
@@ -163,7 +201,7 @@ bool receivePowderInput()
 				while(getButtonPress(buttonEnter)){}
 				return amount;
 			}
-			else if(getButtonPress(buttonUp) || getButtonPress(buttonDown))
+			else if(getButtonPress(buttonAny) && !getButtonPress(buttonEnter))
 			{
 				amountChosen = false;
 			}
@@ -198,11 +236,6 @@ void initializeTasks()
 			startTask(liquid);
 		else if(cups[i].curSpot  == 2)//cup at powder station
 		{
-			int num = 0;
-			if(cups[i].highPowder)
-				num = 5;
-			displayBigTextLine(2, "%d", num);
-			wait1Msec(2000);
 			powderLevel = cups[i].highPowder;
 			startTask(powder);
 		}
@@ -211,8 +244,9 @@ void initializeTasks()
 		else if(cups[i].curSpot == 4)//cup is at loading station
 		{
 			cupCount++;
-			receiptPrint(cupCount,cups[i].time);
+			float timeSec = (time1[T1] - cups[i].time)/1000;
 			startTask(fCup);//constantly polls for whether the cup has been removed, then makes fCup true
+			receiptPrint(cupCount,timeSec, cups[i].highPowder);
 			cups[i].curSpot = -1;//reset the curSpot attribute of that cup object
 		}
 		else
@@ -238,7 +272,6 @@ bool cupsOnTray()
 {
 
 	for(int i = 0; i<4; i++)
-
 	{
 		if(cups[i].curSpot != -1)
 		{
@@ -267,19 +300,14 @@ bool cupsExist()
 	displayBigTextLine(2, "Enter a new");
 	displayBigTextLine(4, "drink or");
 	displayBigTextLine(6, "process will");
-	displayBigTextLine(8,"end");
-	while(time1[T2] < 30000)
-
+	displayBigTextLine(8,"terminate");
+	while(time1[T2] < 15000)
 	{
-
 		if(lightDetected(lightThreshold))
-
 		{
 			clearScreen();
 			return true;
-
 		}
-
 	}
 	return false;
 }
@@ -349,6 +377,6 @@ task main()
 			}
 		}
 		while(cupsExist());
-
+	closeFilePC(reciept);
 	stopAllTasks();
 }
