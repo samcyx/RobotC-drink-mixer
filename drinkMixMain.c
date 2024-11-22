@@ -1,4 +1,3 @@
-
 #include "PC_FileIO.c"
 
 
@@ -20,9 +19,6 @@ short count = 0;
 bool powderLevel = false;
 Cup cups[4];
 
-/*
-dfdf
-*/
 
 void clearScreen()
 {
@@ -44,8 +40,8 @@ bool lightDetected(short threshold)
 task liquid()//Lucas
 {
 	taskLiquid = false;
-	motor[motorA] = 10;
-	wait1Msec(9000);
+	motor[motorA] = 100;
+	wait1Msec(65000);
 	motor[motorA] = 0;
 	taskLiquid = true;
 
@@ -54,8 +50,8 @@ task liquid()//Lucas
 task powder()//Henon
 {
 	taskPowder = false;
-  const int HIGH_POWDER_LVL = 20;
-  const int LOW_POWDER_LVL = 10;
+  const int HIGH_POWDER_LVL = 1.5;
+  const int LOW_POWDER_LVL = 0.75;
   const int CONVFACTOR = 360;
   int powderLVL = 0;
   if (powderLevel)
@@ -68,6 +64,9 @@ task powder()//Henon
 	wait1Msec(50); //Slight delay to take load off CPU
   while (abs(nMotorEncoder[motorB]) < powderLVL*CONVFACTOR) {}
 	motor[motorB] = 0;  // Stop the motor
+	motor[motorB] = -20;
+	wait1Msec(500);
+	motor[motorB] = 0;
 	taskPowder = true;
 
 }
@@ -76,18 +75,32 @@ task stir()//Devin
 {
 	taskStir = false;
 	nMotorEncoder[motorC] = 0;
-	motor[motorC] = -50;
-	while(abs(nMotorEncoder[motorC])<(360*17.75))
+	motor[motorC] = -75;
+	while(abs(nMotorEncoder[motorC])<(360*18))
 	{}
 	motor[motorC] = 0;
 	wait1Msec(100);
-	motor[motorC] = 50;
+
+	for (int i = 0; i < 7; i++) //up down once bottomed out
+	{
+		motor[motorC] = 100;
+		wait1Msec(1000);
+		motor[motorC] = 0;
+		wait1Msec(100);
+		motor[motorC] = -100;
+		wait1Msec(1000);
+		motor[motorC] = 0;
+		wait1Msec(100);
+	}
+
+	motor[motorC] = 75;
 	nMotorEncoder[motorC] = 0;
-	while(abs(nMotorEncoder[motorC])<(360*18.5))
+	while(abs(nMotorEncoder[motorC])<(360*22))
 	{}
 	motor[motorC] = 0;
 	taskStir = true;
 }
+
 task fCup()//polls for whether the cup has been removed or not
 {
 
@@ -111,6 +124,7 @@ void configureAllSensors()//make sure everything aligns with sensor
 	SensorMode[S1] = modeEV3Color_Reflected;
 	wait1Msec(50);
 	nMotorEncoder[motorA] = nMotorEncoder[motorB] = nMotorEncoder[motorC] = nMotorEncoder[motorD] = 0;
+	wait1Msec(50);
 	clearTimer(T1);
 }
 
@@ -165,8 +179,8 @@ bool receivePowderInput()
 	bool amountChosen = false;
 	bool confirm = false;
 	clearScreen();
-	displayBigTextLine(3, "Enter the amount");
-	displayBigTextLine (5, "of powder");
+	displayBigTextLine(3, "Enter the");
+	displayBigTextLine (5, "powder amount");
 	displayBigTextLine(7, "Up for strong");
 	displayBigTextLine(9, "Down for weak");
 	while(!confirm)
@@ -180,6 +194,7 @@ bool receivePowderInput()
 			displayBigTextLine(8, "to cancel");
 			amount = true;
 			amountChosen = true;
+			while(getButtonPress(buttonUp)){}
 		}
 		else if(getButtonPress(buttonDown))
 		{
@@ -190,9 +205,10 @@ bool receivePowderInput()
 			displayBigTextLine(8, "to cancel");
 			amount = false;
 			amountChosen = true;
+			while(getButtonPress(buttonDown))
+			{}
 		}
-		while(getButtonPress(buttonUp)||getButtonPress(buttonDown))
-		{}
+
 		while(amountChosen)
 		{
 			if(getButtonPress(buttonEnter))
@@ -203,7 +219,13 @@ bool receivePowderInput()
 			}
 			else if(getButtonPress(buttonAny) && !getButtonPress(buttonEnter))
 			{
+				clearScreen();
 				amountChosen = false;
+				while(getButtonPress(buttonAny)){}
+				displayBigTextLine(3, "Enter the");
+				displayBigTextLine (5, "powder amount");
+				displayBigTextLine(7, "Up for strong");
+				displayBigTextLine(9, "Down for weak");
 			}
 		}
 	}
@@ -342,25 +364,14 @@ task main()
 	clearTimer(T1);
 
 	float curTime = time1[T1]*100;
-	do{//TODO add watchdog timer to kill program if tasks take too long to execute
+	do{
 			clearScreen();
 			initializeTasks();
 			wait1Msec(1000);
 			curTime = time100[T1];
 			while(!taskLiquid || !taskPowder || !taskStir || !finishedCupRemoved)//while the tasks are false and the watch dog hasn't times out
 			{}
-/*			if(time100[T1] < curTime + 300 && count!=0)
-			{
-				displayBigTextLine(0,"Unexpected");
-				displayBigTextLine(2,"Failure!");
-				stopTask(liquid);
-				stopTask(powder);
-				stopTask(fCup);
-				stopTask(stir);
-				wait1Msec(5000);
-				stopAllTasks();
-			}
-	*/
+
 			wait1Msec(500);
 			if(lightDetected(lightThreshold))//if we detect reflected light
 			{
